@@ -23,7 +23,11 @@ export default function LoginPage() {
       setIsAuthenticated(true);
       setLoading(false);
       // On success, redirect to dashboard
-      navigate('/patient/dashboard');
+      if (data.user_type === 'patient') {
+        navigate('/patient/dashboard');
+      } else {
+        navigate('/pharmacy/dashboard');
+      }
     } catch (err) {
       setError(err?.detail || err?.message || 'Login failed');
       setLoading(false);
@@ -31,7 +35,7 @@ export default function LoginPage() {
   };
 
   return (
-    <Box className="min-h-screen flex items-center justify-center bg-[#f3f4f6] px-4">
+    <Box className="flex items-center justify-center bg-transparent">
       <Card className="w-full max-w-md shadow-lg rounded-2xl">
         <CardContent>
           <Typography variant="h5" className="font-bold mb-6 text-center" style={{ color: '#26A688' }}>
@@ -74,7 +78,7 @@ export default function LoginPage() {
               {loading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
-          <Typography className="mt-4 text-center" variant="body2">
+          <Typography className="pt-4 text-center" variant="body2">
             Don't have an account?{' '}
             <Link href="#" onClick={() => navigate('/register')} underline="hover" style={{ color: '#26A688' }}>
               Register

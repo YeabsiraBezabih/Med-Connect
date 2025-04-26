@@ -59,7 +59,11 @@ export default function RegisterPage() {
       setToken(data.access);
       setIsAuthenticated(true);
       setLoading(false);
-      navigate('/patient/dashboard');
+      if (role === 'pharmacy') {
+        navigate('/pharmacy/dashboard');
+      } else {
+        navigate('/patient/dashboard');
+      } 
     } catch (err) {
       setError(err?.detail || err?.message || 'Registration failed');
       setLoading(false);
@@ -67,7 +71,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <Box className="min-h-screen flex items-center justify-center bg-[#f3f4f6] px-4">
+    <Box className=" flex items-center justify-center bg-[#f3f4f6] ">
       <Card className="w-full max-w-md shadow-lg rounded-2xl">
         <CardContent>
           <Typography variant="h5" className="font-bold mb-6 text-center" style={{ color: '#26A688' }}>

@@ -12,6 +12,13 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+    // Do not add token for login or registration endpoints
+    if (
+      (config.url && config.url.includes('/users/token/')) ||
+      (config.url && config.url.includes('/users/users/') && config.method === 'post')
+    ) {
+      return config;
+    }
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
