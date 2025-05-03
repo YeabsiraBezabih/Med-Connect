@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Upload, MessageSquare, PlusCircle, MapPin, ShieldCheck } from 'lucide-react';
 

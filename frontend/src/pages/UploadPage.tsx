@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Upload, X, Image, AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../contexts/ToastContext';
-import useGeolocation from '../hooks/useGeolocation';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Upload,
+  X,
+  Image,
+  AlertCircle,
+  CheckCircle,
+  Loader,
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
+import useGeolocation from "../hooks/useGeolocation";
 
 // Mock data
-import { getPharmaciesForPrescription } from '../utils/mockData';
+import { getPharmaciesForPrescription } from "../utils/mockData";
+import { storage } from "../config/firebase-options";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 interface PharmacyOffer {
   id: string;
@@ -23,7 +32,7 @@ const UploadPage = () => {
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [offers, setOffers] = useState<PharmacyOffer[]>([]);
-  
+
   const { isAuthenticated } = useAuth();
   const { position, requestLocation } = useGeolocation();
   const { showToast } = useToast();
@@ -42,24 +51,24 @@ const UploadPage = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      
+
       // Check file type
-      const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      const validTypes = ["image/jpeg", "image/png", "application/pdf"];
       if (!validTypes.includes(selectedFile.type)) {
-        showToast('Please upload a JPEG, PNG, or PDF file', 'error');
+        showToast("Please upload a JPEG, PNG, or PDF file", "error");
         return;
       }
-      
+
       // Check file size (max 5MB)
       if (selectedFile.size > 5 * 1024 * 1024) {
-        showToast('File size should be less than 5MB', 'error');
+        showToast("File size should be less than 5MB", "error");
         return;
       }
-      
+
       setFile(selectedFile);
-      
+
       // Create preview for images
-      if (selectedFile.type.startsWith('image/')) {
+      if (selectedFile.type.startsWith("image/")) {
         const objectUrl = URL.createObjectURL(selectedFile);
         setPreview(objectUrl);
       } else {
@@ -72,38 +81,58 @@ const UploadPage = () => {
   // Handle file upload
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!file) {
-      showToast('Please select a file to upload', 'error');
+      showToast("Please select a file to upload", "error");
       return;
     }
-    
+
     if (!isAuthenticated) {
-      showToast('Please log in to upload a prescription', 'warning');
-      navigate('/login', { state: { from: '/upload' } });
+      showToast("Please log in to upload a prescription", "warning");
+      navigate("/login", { state: { from: "/upload" } });
       return;
     }
-    
+
     if (!position) {
-      showToast('Please enable location to find nearby pharmacies', 'warning');
+      showToast("Please enable location to find nearby pharmacies", "warning");
       requestLocation();
       return;
     }
     
-    setUploading(true);
+    try {
+      const fileRef = ref(storage, `prescriptions/${file.name}`);
+      await uploadBytes(fileRef, file);
+      const fileUrl = await getDownloadURL(fileRef);
+
+      // Log or use the file URL as needed
+      console.log("File uploaded to Firebase:", fileUrl);
+
+      // Optionally, you can store the file URL in your database or state
+      showToast("File uploaded successfully!", "success");
+    } catch (error) {
+      console.error("Error uploading file to Firebase:", error);
+      showToast("Failed to upload file. Please try again.", "error");
+      setUploading(false);
+      return;
+    }
     
+    setUploading(true);
+
     // Simulate API call with a delay
     setTimeout(() => {
       // In a real app, we'd upload the file to server and get responses:
       // const formData = new FormData();
       // formData.append('prescription', file);
       // const response = await axios.post('/api/prescriptions', formData);
-      
-      const mockOffers = getPharmaciesForPrescription(position.latitude, position.longitude);
+
+      const mockOffers = getPharmaciesForPrescription(
+        position.latitude,
+        position.longitude
+      );
       setOffers(mockOffers);
       setUploading(false);
       setSubmitted(true);
-      showToast('Prescription uploaded successfully!', 'success');
+      showToast("Prescription uploaded successfully!", "success");
     }, 1500);
   };
 
@@ -125,8 +154,10 @@ const UploadPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-center">Upload Prescription</h1>
-        
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          Upload Prescription
+        </h1>
+
         {!submitted ? (
           <div className="bg-white rounded-xl shadow-md p-6 mb-8">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -134,15 +165,20 @@ const UploadPage = () => {
                 <label className="block text-sm font-medium text-gray-700">
                   Upload your prescription image or PDF
                 </label>
-                
+
                 {!file ? (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
                     <div className="text-center">
                       <Image className="mx-auto h-12 w-12 text-gray-400" />
                       <div className="mt-2">
                         <label htmlFor="file-upload" className="cursor-pointer">
-                          <span className="text-blue-600 hover:text-blue-500">Click to upload</span>
-                          <span className="text-gray-500"> or drag and drop</span>
+                          <span className="text-blue-600 hover:text-blue-500">
+                            Click to upload
+                          </span>
+                          <span className="text-gray-500">
+                            {" "}
+                            or drag and drop
+                          </span>
                           <input
                             id="file-upload"
                             name="file-upload"
@@ -162,9 +198,9 @@ const UploadPage = () => {
                   <div className="relative">
                     {preview ? (
                       <div className="border rounded-lg overflow-hidden">
-                        <img 
-                          src={preview} 
-                          alt="Prescription preview" 
+                        <img
+                          src={preview}
+                          alt="Prescription preview"
                           className="max-h-80 mx-auto"
                         />
                       </div>
@@ -172,11 +208,13 @@ const UploadPage = () => {
                       <div className="border rounded-lg p-4 flex items-center justify-center bg-gray-50">
                         <div className="text-center">
                           <Image className="mx-auto h-12 w-12 text-gray-400" />
-                          <p className="mt-2 text-sm text-gray-500">{file.name}</p>
+                          <p className="mt-2 text-sm text-gray-500">
+                            {file.name}
+                          </p>
                         </div>
                       </div>
                     )}
-                    
+
                     <button
                       type="button"
                       onClick={clearFile}
@@ -187,7 +225,7 @@ const UploadPage = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
@@ -195,25 +233,25 @@ const UploadPage = () => {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm text-blue-700">
-                      Uploading a prescription will notify pharmacies near you. They will make
-                      offers based on your prescription, and you can choose which pharmacy to
-                      contact.
+                      Uploading a prescription will notify pharmacies near you.
+                      They will make offers based on your prescription, and you
+                      can choose which pharmacy to contact.
                     </p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={!file || uploading}
                   className={`btn-primary flex items-center gap-2 ${
-                    (!file || uploading) ? 'opacity-50 cursor-not-allowed' : ''
+                    !file || uploading ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
                   {uploading ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <Loader className="animate-spin" />
                       <span>Uploading...</span>
                     </>
                   ) : (
@@ -235,26 +273,29 @@ const UploadPage = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-green-700">
-                    Your prescription has been successfully uploaded. Nearby pharmacies have been notified
-                    and the following offers are available:
+                    Your prescription has been successfully uploaded. Nearby
+                    pharmacies have been notified and the following offers are
+                    available:
                   </p>
                 </div>
               </div>
             </div>
-            
+
             <h2 className="text-xl font-semibold">Pharmacy Offers</h2>
-            
+
             <div className="grid grid-cols-1 gap-4">
               {offers.map((offer) => (
                 <div key={offer.id} className="card hover:shadow-lg">
                   <div className="p-5">
                     <div className="flex justify-between mb-2">
                       <h3 className="font-semibold text-lg">{offer.name}</h3>
-                      <span className="text-sm text-gray-500">{offer.distance.toFixed(1)} km away</span>
+                      <span className="text-sm text-gray-500">
+                        {offer.distance.toFixed(1)} km away
+                      </span>
                     </div>
-                    
+
                     <p className="text-gray-600 mb-3">{offer.address}</p>
-                    
+
                     <div className="flex justify-between items-center mb-4">
                       <div className="text-gray-700">
                         <span>Ready in: </span>
@@ -264,7 +305,7 @@ const UploadPage = () => {
                         {offer.price.toFixed(2)} ETB
                       </div>
                     </div>
-                    
+
                     <button
                       onClick={() => selectPharmacy(offer.id)}
                       className="btn-primary w-full"

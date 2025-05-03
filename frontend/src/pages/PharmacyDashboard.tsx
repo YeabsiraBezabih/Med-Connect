@@ -1,4 +1,3 @@
-import React from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Package, FileText, MessageSquare, Users, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';

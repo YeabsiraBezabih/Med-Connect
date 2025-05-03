@@ -100,7 +100,7 @@ const ChatPage = () => {
     // Prepare new message
     const newMessage: Message = {
       id: Date.now().toString(),
-      senderId: user.id,
+      senderId: String(user.id),
       text: messageText.trim(),
       timestamp: new Date(),
       isPharmacy: false
