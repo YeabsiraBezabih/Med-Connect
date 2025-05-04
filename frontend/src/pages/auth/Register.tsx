@@ -99,6 +99,10 @@ const Register = () => {
             <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
             <p className="text-gray-600 mt-2">Join MedConnect to find medicines near you</p>
           </div>
+          <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded text-sm text-gray-800">
+  📍 <strong>Tip:</strong> Please fill out this form while you're at your pharmacy to capture the accurate location.
+</div>
+
           
           <div className="bg-white rounded-xl shadow-md p-6 md:p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
