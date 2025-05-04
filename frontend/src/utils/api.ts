@@ -49,10 +49,15 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, clear tokens and redirect to login
+        // If refresh fails, clear tokens and show a toast, then trigger navigation
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        // Dispatch a custom event to notify the app to redirect
+        window.dispatchEvent(new CustomEvent('medconnect:unauthorized'));
+        // Optionally, show a toast (if available globally)
+        if (window.showGlobalToast) {
+          window.showGlobalToast('Session expired. Please log in again.', 'error');
+        }
         return Promise.reject(refreshError);
       }
     }

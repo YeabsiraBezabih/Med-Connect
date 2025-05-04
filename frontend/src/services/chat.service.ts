@@ -50,11 +50,6 @@ const chatService = {
     return response.data;
   },
 
-  // Mark messages as read
-  markMessagesAsRead: async (roomId: number): Promise<void> => {
-    await api.post(`/chat/rooms/${roomId}/mark-read/`);
-  },
-
   // Get unread message count
   getUnreadCount: async (): Promise<number> => {
     const response = await api.get('/chat/unread-count/');

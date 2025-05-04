@@ -1,11 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Pill, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Globe, ArrowRight, Lock } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Pill, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Globe, ArrowRight } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const { isAuthenticated } = useAuth();
   
   return (
     <footer className="bg-gray-900 pt-16 pb-8 relative overflow-hidden">
@@ -64,24 +62,16 @@ const Footer = () => {
                   <span>Home</span>
                 </Link>
               </li>
-              <li>
-                <Link to="/search" className="text-gray-400 hover:text-white transition-colors flex items-center group">
-                  <ArrowRight className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" />
-                  <span>Find Medicine</span>
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to={isAuthenticated ? "/upload" : "/login?redirect=/upload"} 
-                  className="text-gray-400 hover:text-white transition-colors flex items-center group"
-                >
-                  <ArrowRight className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" />
-                  <span>Upload Prescription</span>
-                  {!isAuthenticated && (
-                    <Lock className="h-4 w-4 ml-2 text-gray-500" />
-                  )}
-                </Link>
-              </li>
+              {/* Remove Find Medicine and Upload Prescription links. If you ever want to show Find Medicine only for patients, use:
+              {user?.user_type !== 'pharmacy' && (
+                <li>
+                  <Link to="/search" className="text-gray-400 hover:text-white transition-colors flex items-center group">
+                    <ArrowRight className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" />
+                    <span>Find Medicine</span>
+                  </Link>
+                </li>
+              )}
+              */}
               <li>
                 <Link to="/pharmacy/login" className="text-gray-400 hover:text-white transition-colors flex items-center group">
                   <ArrowRight className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" />

@@ -87,9 +87,6 @@ const ChatsTab = () => {
       // Load messages
       const chatMessages = await chatService.getChatMessages(chat.id);
       setMessages(chatMessages);
-      
-      // Mark messages as read
-      await chatService.markMessagesAsRead(chat.id);
     } catch (error: any) {
       showToast(error.message || 'Failed to load messages', 'error');
     }
@@ -169,7 +166,7 @@ const ChatsTab = () => {
                     <div>
                       <div className="flex items-center">
                         <span className="font-medium">
-                          {chat.patient.first_name} {chat.patient.last_name}
+                          {chat.patient ? `${chat.patient.first_name} ${chat.patient.last_name}` : 'Unknown Patient'}
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 mt-1 truncate w-48">
@@ -202,10 +199,10 @@ const ChatsTab = () => {
             {/* Chat Header */}
             <div className="p-4 border-b">
               <h3 className="font-medium">
-                {selectedChat.patient.first_name} {selectedChat.patient.last_name}
+                {selectedChat.patient ? `${selectedChat.patient.first_name} ${selectedChat.patient.last_name}` : 'Unknown Patient'}
               </h3>
               <p className="text-xs text-gray-500">
-                {selectedChat.patient.phone_number}
+                {selectedChat.patient?.phone_number || ''}
               </p>
             </div>
             

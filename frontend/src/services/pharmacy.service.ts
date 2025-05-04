@@ -11,16 +11,23 @@ export interface Medicine {
   requires_prescription: boolean;
   created_at: string;
   updated_at: string;
+  image?: string;
 }
 
 export interface PrescriptionResponse {
   id: number;
-  pharmacy: number;
-  medicine: Medicine;
-  price: number;
+  prescription_image?: string;
+  latitude?: string;
+  longitude?: string;
+  medicine: Medicine | null;
+  pharmacy: number | null;
+  patient: number;
+  price?: number;
   notes: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: 'pending' | 'accepted' | 'rejected' | 'approved';
   created_at: string;
+  updated_at?: string;
+  chat_room_id?: number;
 }
 
 export interface OrderItem {
@@ -105,6 +112,11 @@ const pharmacyService = {
 
   respondToPrescription: async (prescriptionId: number, data: { price: number; notes?: string }): Promise<PrescriptionResponse> => {
     const response = await api.post(`/pharmacy/prescriptions/${prescriptionId}/respond/`, data);
+    return response.data;
+  },
+
+  acceptPrescription: async (prescriptionId: number): Promise<{ chat_room_id: number }> => {
+    const response = await api.post(`/pharmacy/prescriptions/${prescriptionId}/accept/`);
     return response.data;
   },
 
