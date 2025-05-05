@@ -11,27 +11,16 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import useGeolocation from "../hooks/useGeolocation";
-
-// Mock data
-import { getPharmaciesForPrescription } from "../utils/mockData";
-import { storage } from "../config/firebase-options";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
-interface PharmacyOffer {
-  id: string;
-  name: string;
-  distance: number;
-  price: number;
-  eta: string; // estimated time for fulfillment
-  address: string;
-}
+import { uploadFileToSupabase } from "../utils/supabase";
+import api from "../utils/api";
 
 const UploadPage = () => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [offers, setOffers] = useState<PharmacyOffer[]>([]);
+
+  const [prescription, setPrescription] = useState<any>(null);
 
   const { isAuthenticated } = useAuth();
   const { position, requestLocation } = useGeolocation();
@@ -98,42 +87,27 @@ const UploadPage = () => {
       requestLocation();
       return;
     }
-    
-    try {
-      const fileRef = ref(storage, `prescriptions/${file.name}`);
-      await uploadBytes(fileRef, file);
-      const fileUrl = await getDownloadURL(fileRef);
 
-      // Log or use the file URL as needed
-      console.log("File uploaded to Firebase:", fileUrl);
-
-      // Optionally, you can store the file URL in your database or state
-      showToast("File uploaded successfully!", "success");
-    } catch (error) {
-      console.error("Error uploading file to Firebase:", error);
-      showToast("Failed to upload file. Please try again.", "error");
-      setUploading(false);
-      return;
-    }
-    
     setUploading(true);
+    try {
+      // 1. Upload file to Supabase
+      const downloadURL = await uploadFileToSupabase(file);
 
-    // Simulate API call with a delay
-    setTimeout(() => {
-      // In a real app, we'd upload the file to server and get responses:
-      // const formData = new FormData();
-      // formData.append('prescription', file);
-      // const response = await axios.post('/api/prescriptions', formData);
+      // 2. Send prescription info to backend (including downloadURL and location)
+      const response = await api.post("/pharmacy/prescriptions/", {
+        prescription_image: downloadURL,
+        latitude: Number(position.latitude.toFixed(6)),
+        longitude: Number(position.longitude.toFixed(6)),
+      });
 
-      const mockOffers = getPharmaciesForPrescription(
-        position.latitude,
-        position.longitude
-      );
-      setOffers(mockOffers);
+      setPrescription(response.data);
       setUploading(false);
       setSubmitted(true);
       showToast("Prescription uploaded successfully!", "success");
-    }, 1500);
+    } catch (error) {
+      setUploading(false);
+      showToast("Failed to upload prescription. Please try again.", "error");
+    }
   };
 
   // Clear the selected file
@@ -143,12 +117,6 @@ const UploadPage = () => {
     }
     setFile(null);
     setPreview(null);
-  };
-
-  // Start chat with a pharmacy
-  const selectPharmacy = (pharmacyId: string) => {
-    // In a real app, we'd make an API call to start a chat
-    navigate(`/chat/${pharmacyId}`);
   };
 
   return (
@@ -273,49 +241,44 @@ const UploadPage = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-green-700">
-                    Your prescription has been successfully uploaded. Nearby
-                    pharmacies have been notified and the following offers are
-                    available:
+                    Your prescription has been successfully uploaded.
                   </p>
                 </div>
               </div>
             </div>
-
-            <h2 className="text-xl font-semibold">Pharmacy Offers</h2>
-
-            <div className="grid grid-cols-1 gap-4">
-              {offers.map((offer) => (
-                <div key={offer.id} className="card hover:shadow-lg">
-                  <div className="p-5">
-                    <div className="flex justify-between mb-2">
-                      <h3 className="font-semibold text-lg">{offer.name}</h3>
-                      <span className="text-sm text-gray-500">
-                        {offer.distance.toFixed(1)} km away
-                      </span>
+            {prescription && (
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h2 className="text-xl font-semibold mb-4">
+                  Prescription Details
+                </h2>
+                <div className="flex flex-col md:flex-row gap-6 items-center">
+                  <img
+                    src={prescription.prescription_image}
+                    alt="Prescription"
+                    className="max-h-60 rounded-lg border"
+                  />
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <span className="font-medium">Status:</span>{" "}
+                      {prescription.status}
                     </div>
-
-                    <p className="text-gray-600 mb-3">{offer.address}</p>
-
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="text-gray-700">
-                        <span>Ready in: </span>
-                        <span className="font-medium">{offer.eta}</span>
-                      </div>
-                      <div className="text-lg font-bold text-blue-700">
-                        {offer.price.toFixed(2)} ETB
-                      </div>
+                    <div>
+                      <span className="font-medium">Latitude:</span>{" "}
+                      {prescription.latitude}
                     </div>
-
-                    <button
-                      onClick={() => selectPharmacy(offer.id)}
-                      className="btn-primary w-full"
-                    >
-                      Choose This Pharmacy
-                    </button>
+                    <div>
+                      <span className="font-medium">Longitude:</span>{" "}
+                      {prescription.longitude}
+                    </div>
+                    <div>
+                      <span className="font-medium">Created At:</span>{" "}
+                      {new Date(prescription.created_at).toLocaleString()}
+                    </div>
+                    {/* Add more fields as needed */}
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>

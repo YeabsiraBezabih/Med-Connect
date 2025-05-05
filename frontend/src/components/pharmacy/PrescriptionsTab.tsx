@@ -4,6 +4,19 @@ import { AlertCircle, Check, X, MessageSquare, Eye } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import pharmacyService, { PrescriptionResponse } from '../../services/pharmacy.service';
 
+// Helper to type errors from axios
+function getAxiosError(error: unknown): { response?: { status?: number; data?: { message?: string } }; message?: string; name?: string } {
+  if (typeof error === 'object' && error !== null) {
+    const maybeErr = error as Record<string, unknown>;
+    return {
+      response: maybeErr.response as { status?: number; data?: { message?: string } },
+      message: typeof maybeErr.message === 'string' ? maybeErr.message : undefined,
+      name: typeof maybeErr.name === 'string' ? maybeErr.name : undefined,
+    };
+  }
+  return { message: String(error) };
+}
+
 const PrescriptionsTab = () => {
   const [prescriptions, setPrescriptions] = useState<PrescriptionResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,14 +40,13 @@ const PrescriptionsTab = () => {
         if (isMounted) {
           setPrescriptions(data);
         }
-      } catch (error: any) {
-        if (isMounted && error.name !== 'AbortError') {
-          // Only show toast for non-abort errors and when component is mounted
-          if (error.response?.status === 404) {
-            // Don't show toast for 404, just set empty array
+      } catch (error: unknown) {
+        const err = getAxiosError(error);
+        if (isMounted && err.name !== 'AbortError') {
+          if (err.response?.status === 404) {
             setPrescriptions([]);
           } else {
-            showToast(error.message || 'Failed to load prescriptions', 'error');
+            showToast(err.message || 'Failed to load prescriptions', 'error');
           }
         }
       } finally {
@@ -46,12 +58,11 @@ const PrescriptionsTab = () => {
 
     fetchPrescriptions();
 
-    // Cleanup function
     return () => {
       isMounted = false;
       controller.abort();
     };
-  }, [showToast]); // Only depend on showToast
+  }, [showToast]);
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -79,42 +90,49 @@ const PrescriptionsTab = () => {
   // Handle response submission with better error handling
   const handleResponseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!responseModal) return;
-    
     try {
-      // Validate inputs
       const priceValue = parseFloat(price);
       if (isNaN(priceValue) || priceValue <= 0) {
         throw new Error('Please enter a valid price greater than 0');
       }
-      
-      // Send response
       const response = await pharmacyService.respondToPrescription(responseModal.id, {
         price: priceValue,
         notes: notes.trim()
       });
-      
-      // Update prescription list
-      setPrescriptions(prev => 
-        prev.map(p => p.id === responseModal.id ? response : p)
-      );
-      
-      // Close modal and show success message
+      setPrescriptions(prev => prev.map(p => p.id === responseModal.id ? response : p));
       setResponseModal(null);
       showToast('Response sent successfully', 'success');
-    } catch (error: any) {
-      if (error.response?.status === 400) {
-        showToast(error.response?.data?.message || 'Invalid response data. Please check the price.', 'error');
+    } catch (error: unknown) {
+      const err = getAxiosError(error);
+      if (err.response?.status === 400) {
+        showToast(err.response?.data?.message || 'Invalid response data. Please check the price.', 'error');
       } else {
-        showToast(error.message || 'Failed to send response', 'error');
+        showToast(err.message || 'Failed to send response', 'error');
       }
     }
   };
 
-  // Start chat with user
-  const startChat = (userId: number) => {
-    navigate(`/chat/${userId}`);
+  // Accept prescription and enable chat
+  const handleAccept = async (prescriptionId: number) => {
+    try {
+      const data = await pharmacyService.acceptPrescription(prescriptionId);
+      setPrescriptions((prev) =>
+        prev.map((p) => {
+          if (p.id === prescriptionId) {
+            return {
+              ...p,
+              status: 'accepted',
+              chat_room_id: data.chat_room_id,
+            };
+          }
+          return p;
+        })
+      );
+      showToast('Prescription accepted! You can now chat with the patient.', 'success');
+    } catch (error: unknown) {
+      showToast((error as Error).message || 'Failed to accept prescription', 'error');
+    }
   };
 
   return (
@@ -133,7 +151,7 @@ const PrescriptionsTab = () => {
               <div key={prescription.id} className="card overflow-hidden">
                 <div 
                   className="h-40 bg-cover bg-center cursor-pointer"
-                  style={{ backgroundImage: `url(${prescription.medicine.image})` }}
+                  style={{ backgroundImage: prescription.medicine && prescription.medicine.image ? `url(${prescription.medicine.image})` : prescription.prescription_image ? `url(${prescription.prescription_image})` : 'none' }}
                   onClick={() => openViewer(prescription)}
                 >
                   <div className="flex justify-end p-2">
@@ -142,14 +160,14 @@ const PrescriptionsTab = () => {
                       prescription.status === 'accepted' ? 'badge-success' :
                       'badge-error'
                     }`}>
-                      {prescription.status.charAt(0).toUpperCase() + prescription.status.slice(1)}
+                      {prescription.status?.charAt(0).toUpperCase() + prescription.status?.slice(1) || 'No status'}
                     </span>
                   </div>
                 </div>
                 
                 <div className="p-4">
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium">{prescription.medicine.name}</h3>
+                    <h3 className="font-medium">{prescription.medicine && prescription.medicine.name ? prescription.medicine.name : 'No medicine info'}</h3>
                     <span className="text-sm text-gray-500">
                       {prescription.price ? `${prescription.price.toFixed(2)} ETB` : 'No price set'}
                     </span>
@@ -174,17 +192,17 @@ const PrescriptionsTab = () => {
                     
                     {prescription.status === 'pending' && (
                       <button
-                        onClick={() => openResponseModal(prescription)}
+                        onClick={() => handleAccept(prescription.id)}
                         className="btn-primary flex-1 py-1.5 flex items-center justify-center gap-1"
                       >
                         <Check className="h-4 w-4" />
-                        <span>Respond</span>
+                        <span>Accept</span>
                       </button>
                     )}
                     
-                    {prescription.status === 'accepted' && (
+                    {(prescription.status === 'accepted' && prescription.chat_room_id) && (
                       <button
-                        onClick={() => startChat(prescription.patient)}
+                        onClick={() => navigate(`/chat/room/${prescription.chat_room_id}`)}
                         className="btn-primary flex-1 py-1.5 flex items-center justify-center gap-1"
                       >
                         <MessageSquare className="h-4 w-4" />
@@ -222,11 +240,21 @@ const PrescriptionsTab = () => {
             </div>
             
             <div className="p-4">
-              <img
-                src={viewPrescription.medicine.image}
-                alt="Prescription"
-                className="w-full rounded-lg"
-              />
+              {viewPrescription.medicine && viewPrescription.medicine.image ? (
+                <img
+                  src={viewPrescription.medicine.image}
+                  alt="Prescription"
+                  className="w-full rounded-lg"
+                />
+              ) : viewPrescription.prescription_image ? (
+                <img
+                  src={viewPrescription.prescription_image}
+                  alt="Prescription"
+                  className="w-full rounded-lg"
+                />
+              ) : (
+                <div className="text-center text-gray-400">No image available</div>
+              )}
             </div>
             
             <div className="flex justify-end gap-3 p-4 border-t">

@@ -34,3 +34,11 @@ class PharmacyProfile(models.Model):
     
     def __str__(self):
         return self.business_name
+
+class SearchHistory(models.Model):
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='search_histories')
+    query = models.CharField(max_length=255)
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.query} ({self.date})"

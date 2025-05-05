@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, FileText, MessageSquare, Clock, AlertCircle } from 'lucide-react';
+import { Search, FileText, MessageSquare, Clock, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import userService, { Prescription, SearchHistory, Order } from '../services/user.service';
@@ -15,60 +15,81 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
   const { user } = useAuth();
   const { showToast } = useToast();
 
-  // Fetch data based on active tab
-  const fetchData = useCallback(async (showErrorToast = true) => {
+  // Fetch all data in parallel
+  const fetchAllData = useCallback(async (showErrorToast = true) => {
     try {
       setError(null);
-      
-      // Don't fetch if it's been less than 5 seconds since last fetch
+      setLoading(true);
       const now = Date.now();
-      if (now - lastFetchTime < 5000) {
-        return;
-      }
+      if (now - lastFetchTime < 5000) return;
       setLastFetchTime(now);
-      
+      const [searches, prescs, ords] = await Promise.all([
+        userService.getSearchHistory(),
+        userService.getPrescriptions(),
+        userService.getOrders(),
+      ]);
+      setSearchHistory(searches || []);
+      setPrescriptions(prescs || []);
+      setOrders(ords || []);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Failed to fetch data';
+      setError(errorMessage);
+      if (showErrorToast) showToast(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast, lastFetchTime]);
+
+  // Fetch only the active tab's data
+  const fetchTabData = useCallback(async (showErrorToast = true) => {
+    try {
+      setError(null);
+      setLoading(true);
+      const now = Date.now();
+      if (now - lastFetchTime < 5000) return;
+      setLastFetchTime(now);
       if (activeTab === 'searches') {
-        const data = await userService.getSearchHistory();
-        setSearchHistory(data || []);
+        setSearchHistory(await userService.getSearchHistory() || []);
       } else if (activeTab === 'prescriptions') {
-        const data = await userService.getPrescriptions();
-        setPrescriptions(data || []);
+        setPrescriptions(await userService.getPrescriptions() || []);
       } else if (activeTab === 'orders') {
-        const data = await userService.getOrders();
-        setOrders(data || []);
+        setOrders(await userService.getOrders() || []);
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to fetch data';
       setError(errorMessage);
-      if (showErrorToast) {
-        showToast(errorMessage, 'error');
-      }
+      if (showErrorToast) showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
   }, [activeTab, showToast, lastFetchTime]);
 
-  // Initial data load
+  // Initial data load (parallel)
   useEffect(() => {
     if (!user) return;
-    setLoading(true);
-    fetchData(true); // Show error toast on initial load
-  }, [activeTab, user, fetchData]);
+    fetchAllData(true);
+  }, [user, fetchAllData]);
 
-  // Auto-refresh setup with debounce
+  // Fetch only the tab's data on navigation
   useEffect(() => {
     if (!user) return;
-    
+    fetchTabData(true);
+  }, [activeTab, user, fetchTabData]);
+
+  // Auto-refresh all data
+  useEffect(() => {
+    if (!user) return;
     const intervalId = setInterval(() => {
-      fetchData(false); // Don't show error toast on auto-refresh
+      fetchAllData(false);
     }, REFRESH_INTERVAL);
-
     return () => clearInterval(intervalId);
-  }, [user, fetchData]);
+  }, [user, fetchAllData]);
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -134,7 +155,7 @@ const UserDashboard = () => {
                 <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
                 <p className="text-red-600">{error}</p>
                 <button 
-                  onClick={fetchData}
+                  onClick={fetchTabData}
                   className="mt-4 text-blue-600 hover:text-blue-800"
                 >
                   Try Again
@@ -210,7 +231,7 @@ const UserDashboard = () => {
                     {prescriptions.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {prescriptions.map((prescription) => (
-                          <div key={prescription.id} className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                          <div key={prescription.id} className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPrescription(prescription)}>
                             <div className="aspect-w-16 aspect-h-9 bg-gray-100">
                               <img 
                                 src={prescription.prescription_image} 
@@ -234,13 +255,18 @@ const UserDashboard = () => {
                               {prescription.notes && (
                                 <p className="text-sm text-gray-600 mt-2">{prescription.notes}</p>
                               )}
-                              {prescription.status === 'pending' && (
-                                <Link 
-                                  to={`/prescriptions/${prescription.id}`}
-                                  className="text-blue-600 hover:text-blue-800 text-sm block mt-2"
+                              <span className="text-blue-600 hover:text-blue-800 text-sm block mt-2">View Details</span>
+                              {prescription.status === 'approved' && prescription.chat_room_id && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.location.href = `/chat/room/${prescription.chat_room_id}`;
+                                  }}
+                                  className="btn-primary mt-2 flex items-center gap-1"
                                 >
-                                  View Details
-                                </Link>
+                                  <MessageSquare className="h-4 w-4" />
+                                  <span>Chat</span>
+                                </button>
                               )}
                             </div>
                           </div>
@@ -269,7 +295,8 @@ const UserDashboard = () => {
                         {orders.map((order) => (
                           <div
                             key={order.id}
-                            className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                            className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                            onClick={() => setSelectedOrder(order)}
                           >
                             <div className="flex justify-between items-center mb-2">
                               <h3 className="font-medium">Order #{order.id}</h3>
@@ -289,12 +316,7 @@ const UserDashboard = () => {
                               <span>Total: ${order.total_amount}</span>
                             </div>
                             <div className="mt-2">
-                              <Link
-                                to={`/orders/${order.id}`}
-                                className="text-blue-600 hover:text-blue-800 text-sm"
-                              >
-                                View Details
-                              </Link>
+                              <span className="text-blue-600 hover:text-blue-800 text-sm">View Details</span>
                             </div>
                           </div>
                         ))}
@@ -314,6 +336,55 @@ const UserDashboard = () => {
             )}
           </div>
         </div>
+        
+        {/* Prescription Detail Modal */}
+        {selectedPrescription && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-lg w-full">
+              <div className="flex justify-between items-center border-b p-4">
+                <h3 className="text-lg font-medium">Prescription Details</h3>
+                <button onClick={() => setSelectedPrescription(null)} className="text-gray-400 hover:text-gray-500"><X className="h-6 w-6" /></button>
+              </div>
+              <div className="p-4">
+                <img src={selectedPrescription.prescription_image} alt="Prescription" className="w-full rounded mb-4" />
+                <div className="mb-2"><strong>Status:</strong> {selectedPrescription.status}</div>
+                <div className="mb-2"><strong>Notes:</strong> {selectedPrescription.notes || 'None'}</div>
+                <div className="mb-2"><strong>Created At:</strong> {formatDate(selectedPrescription.created_at)}</div>
+                <div className="mb-2"><strong>Updated At:</strong> {formatDate(selectedPrescription.updated_at)}</div>
+                <div className="mb-2"><strong>Patient ID:</strong> {selectedPrescription.patient}</div>
+                <div className="mb-2"><strong>Pharmacy:</strong> {selectedPrescription.pharmacy || 'N/A'}</div>
+                <div className="mb-2"><strong>Medicine:</strong> {selectedPrescription.medicine || 'N/A'}</div>
+              </div>
+              <div className="flex justify-end p-4 border-t">
+                <button onClick={() => setSelectedPrescription(null)} className="btn-outline">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Order Detail Modal */}
+        {selectedOrder && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-lg w-full">
+              <div className="flex justify-between items-center border-b p-4">
+                <h3 className="text-lg font-medium">Order Details</h3>
+                <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-500"><X className="h-6 w-6" /></button>
+              </div>
+              <div className="p-4">
+                <div className="mb-2"><strong>Status:</strong> {selectedOrder.status}</div>
+                <div className="mb-2"><strong>Total Amount:</strong> ${selectedOrder.total_amount}</div>
+                <div className="mb-2"><strong>Shipping Address:</strong> {selectedOrder.shipping_address}</div>
+                <div className="mb-2"><strong>Created At:</strong> {formatDate(selectedOrder.created_at)}</div>
+                <div className="mb-2"><strong>Updated At:</strong> {formatDate(selectedOrder.updated_at)}</div>
+                <div className="mb-2"><strong>Patient ID:</strong> {selectedOrder.patient}</div>
+                <div className="mb-2"><strong>Pharmacy ID:</strong> {selectedOrder.pharmacy}</div>
+                <div className="mb-2"><strong>Prescription ID:</strong> {selectedOrder.prescription || 'N/A'}</div>
+              </div>
+              <div className="flex justify-end p-4 border-t">
+                <button onClick={() => setSelectedOrder(null)} className="btn-outline">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Help Section */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

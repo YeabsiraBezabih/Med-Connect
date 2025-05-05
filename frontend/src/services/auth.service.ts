@@ -16,8 +16,8 @@ export interface AuthResponse {
   user: UserProfile;
 }
 
-const TOKEN_KEY = 'token';
-const REFRESH_TOKEN_KEY = 'refreshToken';
+const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
 const PHARMACY_ID_KEY = 'pharmacyId';
 
 const authService = {
@@ -31,8 +31,8 @@ const authService = {
         throw new Error('Invalid token response from server');
       }
       
-      // Store tokens
-      localStorage.setItem(TOKEN_KEY, access);
+      // Store tokens with correct keys
+      localStorage.setItem(ACCESS_TOKEN_KEY, access);
       localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
       
       try {
@@ -59,14 +59,14 @@ const authService = {
         };
       } catch (profileError: any) {
         // If getting profile fails, clear tokens and throw error
-        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(PHARMACY_ID_KEY);
         throw new Error(profileError.message || 'Failed to get user profile');
       }
     } catch (error: any) {
       // Clear any existing tokens
-      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(PHARMACY_ID_KEY);
       
@@ -95,9 +95,13 @@ const authService = {
   },
 
   logout: () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(PHARMACY_ID_KEY);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('pharmacyId');
+    localStorage.removeItem('medconnect_token');
+    localStorage.removeItem('medconnect_user');
   },
 
   refreshToken: async (): Promise<string> => {
@@ -114,11 +118,11 @@ const authService = {
         throw new Error('Invalid refresh token response');
       }
       
-      localStorage.setItem(TOKEN_KEY, access);
+      localStorage.setItem(ACCESS_TOKEN_KEY, access);
       return access;
     } catch (error: any) {
       // Clear tokens on refresh error
-      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(PHARMACY_ID_KEY);
       throw error;
@@ -147,11 +151,11 @@ const authService = {
   },
 
   getToken: (): string | null => {
-    return localStorage.getItem(TOKEN_KEY);
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem(TOKEN_KEY);
+    return !!localStorage.getItem(ACCESS_TOKEN_KEY);
   },
 
   getPharmacyId: (): number | null => {

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import PatientProfile, PharmacyProfile
+from .models import PatientProfile, PharmacyProfile, SearchHistory
 
 User = get_user_model()
 
@@ -63,4 +63,9 @@ class UserSerializer(serializers.ModelSerializer):
             user = User.objects.create_user(**validated_data)
             return user
         except Exception as e:
-            raise serializers.ValidationError(f"Error creating user: {str(e)}") 
+            raise serializers.ValidationError(f"Error creating user: {str(e)}")
+
+class SearchHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SearchHistory
+        fields = ['id', 'query', 'date'] 
