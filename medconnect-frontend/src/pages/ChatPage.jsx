@@ -7,6 +7,7 @@ const mockMessages = [
   { id: 2, sender: 'patient', text: 'Thank you!' },
 ];
 
+
 export default function ChatPage() {
   const [messages, setMessages] = useState(mockMessages);
   const [input, setInput] = useState('');

@@ -2,11 +2,14 @@ import React from 'react';
 import { Box, Card, CardContent, Typography, Button, List, ListItem, ListItemText } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
+
 const mockBroadcast = {
   id: 1,
   status: 'Broadcasting',
   file: 'prescription1.pdf',
   note: 'Take with food',
+
+
   responses: [
     { id: 1, pharmacy: 'ABC Pharmacy', status: 'Available' },
     { id: 2, pharmacy: 'XYZ Pharmacy', status: 'Not Available' },
