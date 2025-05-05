@@ -97,7 +97,7 @@ const Register = () => {
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-600 mt-2">Join MedConnect to find medicines near you</p>
+            <p className="text-gray-600 mt-2">Discover nearby pharmacies and medicines with MedConnect</p>
           </div>
           
           <div className="bg-white rounded-xl shadow-md p-6 md:p-8">
