@@ -43,3 +43,15 @@ class ResponseCreateSerializer(serializers.ModelSerializer):
         validated_data['broadcast_id'] = broadcast_id
         validated_data['pharmacy'] = self.context['request'].user
         return super().create(validated_data) 
+    
+class NearExpiryDiscountSerializer(serializers.Serializer):
+    medication_name = serializers.CharField(source='broadcast.medication_name')
+    original_price = serializers.DecimalField(source='price', max_digits=10, decimal_places=2)
+    discounted_price = serializers.SerializerMethodField()
+    expiry_date = serializers.DateField(source='broadcast.expiry_date')
+    broadcast_id = serializers.IntegerField(source='broadcast.id')
+    response_id = serializers.IntegerField(source='id')
+
+    def get_discounted_price(self, obj):
+        """Calculate 50% discount if price exists"""
+        return round(obj.price * 0.5, 2) if obj.price else None

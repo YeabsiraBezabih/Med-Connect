@@ -90,3 +90,31 @@ class PharmacyResponseViewSet(viewsets.ModelViewSet):
         broadcast.save()
         
         return Response({'status': 'response accepted'}) 
+    
+class PharmacyResponseForExpiryDrugsViewSet(viewsets.ModelViewSet):
+    # ... other viewset code ...
+
+    @action(detail=False, methods=['get'], url_path='near-expiry-discounts')
+    def near_expiry_discounts(self, request):
+        """List drugs nearing expiry with 50% discount (for pharmacies only)"""
+        if request.user.user_type != 'pharmacy':
+            return Response(
+                {"error": "Only pharmacies can view near-expiry discounts."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get drugs expiring within 90 days
+        threshold_date = timezone.now() + timedelta(days=90)
+        responses = self.get_queryset().filter(
+            broadcast__expiry_date__lte=threshold_date,
+            broadcast__status='active'
+        )
+
+        serializer = NearExpiryDiscountSerializer(responses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def get_queryset(self):
+        """Filter responses for the current pharmacy user"""
+        return PharmacyResponse.objects.filter(
+            pharmacy=self.request.user
+        ).select_related('broadcast')
