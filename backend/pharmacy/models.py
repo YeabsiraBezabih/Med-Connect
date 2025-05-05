@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 from users.models import User, PharmacyProfile
 
 class Medicine(models.Model):
@@ -8,8 +9,15 @@ class Medicine(models.Model):
     stock = models.IntegerField()
     pharmacy = models.ForeignKey(PharmacyProfile, on_delete=models.CASCADE, related_name='medicines')
     requires_prescription = models.BooleanField(default=True)
+    expire_date = models.DateField(null=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    discount = models.DecimalField(
+        max_digits=3, 
+        decimal_places=2, 
+        default=0, 
+        validators=[MinValueValidator(0)]
+    )
 
     def __str__(self):
         return f"{self.name} - {self.pharmacy.business_name}"

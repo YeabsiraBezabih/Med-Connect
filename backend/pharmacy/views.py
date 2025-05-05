@@ -12,6 +12,7 @@ from .serializers import MedicineSerializer, PrescriptionSerializer, OrderSerial
 
 class MedicineViewSet(viewsets.ModelViewSet):
     queryset = Medicine.objects.all()
+    expired_to_be = Medicine.objects.filter()
     serializer_class = MedicineSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']

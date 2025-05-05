@@ -8,8 +8,10 @@ export interface Medicine {
   price: number;
   stock: number;
   pharmacy: number;
+  expire_date: string;
   requires_prescription: boolean;
   created_at: string;
+  discount: number;
   updated_at: string;
   image?: string;
 }
@@ -43,6 +45,7 @@ export interface CreateMedicineData {
   description: string;
   price: number;
   stock: number;
+  expire_date: string;
   requires_prescription: boolean;
   pharmacy: number;
 }
