@@ -33,9 +33,23 @@ class MedicineSerializer(serializers.ModelSerializer):
         return data
 
 class PrescriptionSerializer(serializers.ModelSerializer):
+    prescription_image = serializers.URLField()
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False)
+    medicine = serializers.PrimaryKeyRelatedField(queryset=Medicine.objects.all(), required=False, allow_null=True)
+    pharmacy = serializers.PrimaryKeyRelatedField(queryset=PharmacyProfile.objects.all(), required=False, allow_null=True)
+    patient = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
         model = Prescription
         fields = '__all__'
+
+    def create(self, validated_data):
+        print('DEBUG: context:', self.context)
+        print('DEBUG: validated_data before:', validated_data)
+        if 'patient' not in validated_data:
+            validated_data['patient'] = self.context['request'].user
+        print('DEBUG: validated_data after:', validated_data)
+        return super().create(validated_data)
 
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:

@@ -23,11 +23,13 @@ class Prescription(models.Model):
     )
 
     patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='prescriptions')
-    medicine = models.ForeignKey(Medicine, on_delete=models.CASCADE)
-    pharmacy = models.ForeignKey(PharmacyProfile, on_delete=models.CASCADE)
-    prescription_image = models.ImageField(upload_to='prescriptions/')
+    medicine = models.ForeignKey(Medicine, on_delete=models.CASCADE, null=True, blank=True)
+    pharmacy = models.ForeignKey(PharmacyProfile, on_delete=models.CASCADE, null=True, blank=True)
+    prescription_image = models.URLField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     notes = models.TextField(blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Mail, Lock, Eye, EyeOff } from '../../components/icons';
+import authService from '../../services/auth.service';
 
 interface LoginError extends Error {
   response?: {
@@ -19,7 +20,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -43,14 +44,13 @@ const Login = () => {
       await login({ username: email, password });
       // Show success message and redirect based on updated user context
       showToast('Login successful!', 'success');
-      // Use setTimeout to ensure context is updated before redirect
-      setTimeout(() => {
-        if (user?.user_type === 'pharmacy') {
-          navigate('/pharmacy/dashboard');
-        } else {
-          navigate('/dashboard');
-        }
-      }, 0);
+      // Fetch user profile directly to ensure up-to-date info
+      const loggedInUser = await authService.getCurrentUser();
+      if (loggedInUser.user_type === 'pharmacy') {
+        navigate('/pharmacy/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       // Show error message
       const loginError = error as LoginError;

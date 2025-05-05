@@ -3,8 +3,8 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from .models import PatientProfile, PharmacyProfile
-from .serializers import UserSerializer, PatientProfileSerializer, PharmacyProfileSerializer
+from .models import PatientProfile, PharmacyProfile, SearchHistory
+from .serializers import UserSerializer, PatientProfileSerializer, PharmacyProfileSerializer, SearchHistorySerializer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,20 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='search-history')
+    def search_history(self, request):
+        histories = SearchHistory.objects.filter(user=request.user).order_by('-date')[:20]
+        serializer = SearchHistorySerializer(histories, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='search-history')
+    def add_search_history(self, request):
+        query = request.data.get('query')
+        if not query:
+            return Response({'error': 'Query is required.'}, status=400)
+        SearchHistory.objects.create(user=request.user, query=query)
+        return Response({'success': True})
 
 class PatientProfileViewSet(viewsets.ModelViewSet):
     queryset = PatientProfile.objects.all()
