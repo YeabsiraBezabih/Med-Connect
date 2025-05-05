@@ -47,10 +47,10 @@ const Login = () => {
       // Fetch user profile directly to ensure up-to-date info
       const loggedInUser = await authService.getCurrentUser();
       if (loggedInUser.user_type === 'pharmacy') {
-        navigate('/pharmacy/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+          navigate('/pharmacy/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
     } catch (error) {
       // Show error message
       const loginError = error as LoginError;

@@ -267,7 +267,7 @@ const UploadPage = () => {
                     {/* Add more fields as needed */}
                   </div>
                 </div>
-              </div>
+            </div>
             )}
           </div>
         )}

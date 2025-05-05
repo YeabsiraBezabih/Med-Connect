@@ -241,11 +241,11 @@ const PrescriptionsTab = () => {
             
             <div className="p-4">
               {viewPrescription.medicine && viewPrescription.medicine.image ? (
-                <img
-                  src={viewPrescription.medicine.image}
-                  alt="Prescription"
-                  className="w-full rounded-lg"
-                />
+              <img
+                src={viewPrescription.medicine.image}
+                alt="Prescription"
+                className="w-full rounded-lg"
+              />
               ) : viewPrescription.prescription_image ? (
                 <img
                   src={viewPrescription.prescription_image}

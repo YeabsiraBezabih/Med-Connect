@@ -5,6 +5,9 @@ import { useToast } from '../contexts/ToastContext';
 import { searchMedicines, searchNearbyPharmacies, Medicine } from '../services/medicineService';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import MapView from '../components/MapView';
+
+const OPENROUTESERVICE_API_KEY = "5b3ce3597851110001cf62487ed54cf83d424fc0af1792483fb0fb84";
 
 const SearchPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,6 +17,9 @@ const SearchPage = () => {
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<'price' | 'distance'>('distance');
   const [filterInStock, setFilterInStock] = useState(true);
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState<number | null>(null);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [radius, setRadius] = useState(10);
   
   const { position, error: geoError, requestLocation } = useGeolocation();
   const { showToast } = useToast();
@@ -54,7 +60,7 @@ const SearchPage = () => {
     }
     
     if (!position) {
-      showToast('Please enable location to find nearby pharmacies', 'warning');
+      showToast('Location sharing is required to search for medicines nearby. Please enable location.', 'error');
       requestLocation();
       return;
     }
@@ -91,7 +97,9 @@ const SearchPage = () => {
           const results = await searchNearbyPharmacies(
             selectedMedicine,
             position.latitude,
-            position.longitude
+            position.longitude,
+            radius,
+            sortBy
           );
           setPharmacies(results);
         } catch (error) {
@@ -104,7 +112,7 @@ const SearchPage = () => {
     };
 
     fetchPharmacies();
-  }, [selectedMedicine, position, showToast]);
+  }, [selectedMedicine, position, showToast, sortBy, radius]);
 
   // Show geolocation error if any
   useEffect(() => {
@@ -112,6 +120,24 @@ const SearchPage = () => {
       showToast(geoError, 'error');
     }
   }, [geoError, showToast]);
+
+  // When pharmacies change, reset selected pharmacy to the first
+  useEffect(() => {
+    if (sortedPharmacies().length > 0) {
+      setSelectedPharmacyId(sortedPharmacies()[0].pharmacy.id);
+    } else {
+      setSelectedPharmacyId(null);
+    }
+  }, [pharmacies, sortBy, filterInStock]);
+
+  // MapView expects pharmacies as array of {id, name, latitude, longitude, address}
+  const mapPharmacies = sortedPharmacies().map((med) => ({
+    id: med.pharmacy.id,
+    name: med.pharmacy.name,
+    latitude: med.pharmacy.latitude,
+    longitude: med.pharmacy.longitude,
+    address: med.pharmacy.address,
+  }));
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -131,6 +157,7 @@ const SearchPage = () => {
                 onChange={handleSearchChange}
                 placeholder="Search for a medicine..."
                 className="input pl-10"
+                disabled={!position}
               />
               {suggestions.length > 0 && (
                 <div className="absolute z-10 w-full bg-white mt-1 border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -147,6 +174,11 @@ const SearchPage = () => {
                 </div>
               )}
             </div>
+            {!position && (
+              <div className="text-red-600 text-center font-semibold mt-2">
+                Location sharing is required to search for medicines nearby. Please enable location.
+              </div>
+            )}
             
             <div className="flex flex-col sm:flex-row gap-4">
               <button 
@@ -188,7 +220,19 @@ const SearchPage = () => {
                   <option value="distance">Sort by Distance</option>
                   <option value="price">Sort by Price</option>
                 </select>
-                
+                <select
+                  value={radius}
+                  onChange={e => setRadius(Number(e.target.value))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value={1}>1 km</option>
+                  <option value={2}>2 km</option>
+                  <option value={5}>5 km</option>
+                  <option value={10}>10 km</option>
+                  <option value={20}>20 km</option>
+                  <option value={50}>50 km</option>
+                </select>
+                <span className="text-sm text-gray-500">Radius: {radius} km</span>
                 <label className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm">
                   <input 
                     type="checkbox"
@@ -253,14 +297,15 @@ const SearchPage = () => {
                         >
                           Call
                         </a>
-                        <a 
-                          href={`https://maps.google.com/?q=${medicine.pharmacy.latitude},${medicine.pharmacy.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
                           className="btn-outline flex-1 text-center"
+                          onClick={() => {
+                            setSelectedPharmacyId(medicine.pharmacy.id);
+                            setShowMapModal(true);
+                          }}
                         >
                           View on Map
-                        </a>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -276,6 +321,47 @@ const SearchPage = () => {
                   We couldn't find any pharmacies with {selectedMedicine} near your location.
                   Try searching for a different medicine or expanding your search radius.
                 </p>
+              </div>
+            )}
+
+            {selectedMedicine && position && mapPharmacies.length > 0 && selectedPharmacyId && (
+              <div className="my-8">
+                <h3 className="text-lg font-semibold mb-2 text-center">Map View</h3>
+                <MapView
+                  userLocation={{ lat: position.latitude, lng: position.longitude }}
+                  pharmacies={mapPharmacies}
+                  selectedPharmacyId={selectedPharmacyId}
+                  onSelectPharmacy={setSelectedPharmacyId}
+                  apiKey={OPENROUTESERVICE_API_KEY}
+                />
+              </div>
+            )}
+
+            {/* Map Modal for single pharmacy */}
+            {showMapModal && selectedPharmacyId && (
+              <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black bg-opacity-40">
+                <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-4 relative flex flex-col max-h-[90vh]">
+                  <button onClick={() => setShowMapModal(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+                  <h2 className="text-xl font-bold mb-2 text-center">Pharmacy Location</h2>
+                  <div className="flex-1 overflow-y-auto mb-2 px-1" style={{ minHeight: 300 }}>
+                    <MapView
+                      userLocation={{ lat: position.latitude, lng: position.longitude }}
+                      pharmacies={mapPharmacies}
+                      selectedPharmacyId={selectedPharmacyId}
+                      onSelectPharmacy={() => {}}
+                      apiKey={OPENROUTESERVICE_API_KEY}
+                      singlePharmacyMode={true}
+                    />
+                  </div>
+                  <a
+                    href={`https://maps.google.com/?q=${mapPharmacies.find(p => p.id === selectedPharmacyId)?.latitude},${mapPharmacies.find(p => p.id === selectedPharmacyId)?.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary w-full mt-4 text-center"
+                  >
+                    View on Google Maps
+                  </a>
+                </div>
               </div>
             )}
           </div>

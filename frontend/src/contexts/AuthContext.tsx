@@ -10,6 +10,7 @@ interface User {
   user_type: 'patient' | 'pharmacy';
   phone_number: string;
   address: string;
+  location?: { lat: number; lng: number };
 }
 
 interface AuthContextType {
@@ -20,6 +21,7 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  updateLocation: (lat: number, lng: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,6 +80,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthenticated(false);
   };
 
+  const updateLocation = (lat: number, lng: number) => {
+    setUser((prev) => prev ? { ...prev, location: { lat, lng } } : prev);
+    const storedUser = localStorage.getItem('medconnect_user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      user.location = { lat, lng };
+      localStorage.setItem('medconnect_user', JSON.stringify(user));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -88,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     logout,
     isAuthenticated,
+    updateLocation,
       }}
     >
       {children}

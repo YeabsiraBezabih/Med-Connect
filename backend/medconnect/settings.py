@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_yasg',
+    'channels',
     
     # Local apps
     'users',
@@ -84,6 +85,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'medconnect.wsgi.application'
+
+ASGI_APPLICATION = 'medconnect.asgi.application'
 
 
 # Database
@@ -159,8 +162,10 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://localhost:5173",  # Vite development server
-    "http://127.0.0.1:5173"   # Vite development server
+    "http://localhost:5173", 
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174"
 ]
 
 # Additional CORS settings
@@ -195,3 +200,12 @@ SIMPLE_JWT = {
 
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}

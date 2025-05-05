@@ -40,7 +40,8 @@ export const searchNearbyPharmacies = async (
   name: string,
   latitude: number,
   longitude: number,
-  radius: number = 10
+  radius: number = 10,
+  sort: 'distance' | 'price' = 'distance'
 ): Promise<Medicine[]> => {
   try {
     const response = await axios.get<Medicine[]>(`${API_URL}/pharmacy/medicines/search_nearby/`, {
@@ -48,7 +49,8 @@ export const searchNearbyPharmacies = async (
         name,
         lat: latitude,
         lng: longitude,
-        radius
+        radius,
+        sort
       }
     });
     return response.data;

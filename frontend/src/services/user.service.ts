@@ -19,16 +19,34 @@ export interface SearchHistory {
   pharmacies_viewed: number;
 }
 
+export interface PharmacyProfile {
+  id: number;
+  business_name: string;
+  license_number: string;
+  operating_hours: string;
+  latitude: number;
+  longitude: number;
+  is_verified: boolean;
+  user: {
+    id: number;
+    email: string;
+    phone_number: string;
+    address: string;
+  };
+}
+
 export interface Prescription {
   id: number;
   patient: number;
-  medicine: number;
-  pharmacy: number;
+  medicine: number | null;
+  pharmacy: PharmacyProfile | null;
   prescription_image: string;
   status: 'pending' | 'approved' | 'rejected' | 'filled';
   notes: string;
   created_at: string;
   updated_at: string;
+  chat_room_id?: number | null;
+  chat_room_url?: string | null;
 }
 
 export interface Order {

@@ -4,8 +4,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from .models import PatientProfile, PharmacyProfile, SearchHistory
-from .serializers import UserSerializer, PatientProfileSerializer, PharmacyProfileSerializer, SearchHistorySerializer
+from .serializers import UserSerializer, PatientProfileSerializer, PharmacyProfileSerializer, SearchHistorySerializer, CustomTokenObtainPairSerializer
 import logging
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -94,3 +95,6 @@ class PharmacyProfileViewSet(viewsets.ModelViewSet):
         if self.request.user.user_type == 'pharmacy':
             return PharmacyProfile.objects.filter(user=self.request.user)
         return PharmacyProfile.objects.filter(is_verified=True)
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer

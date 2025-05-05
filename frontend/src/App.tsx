@@ -7,6 +7,7 @@ import type { ToastType } from './contexts/ToastContext';
 // Layout components
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
+import ChatBotButton from './components/ChatBotButton';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -113,6 +114,7 @@ function AppInner() {
           />
         </Routes>
       </main>
+      <ChatBotButton />
       <Footer />
     </div>
   );

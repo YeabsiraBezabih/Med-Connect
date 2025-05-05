@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from .models import PatientProfile, PharmacyProfile, SearchHistory
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -68,4 +69,27 @@ class UserSerializer(serializers.ModelSerializer):
 class SearchHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = SearchHistory
-        fields = ['id', 'query', 'date'] 
+        fields = ['id', 'query', 'date']
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        username = attrs.get('username')
+        password = attrs.get('password')
+        user = None
+
+        # Try to authenticate with username
+        user = authenticate(username=username, password=password)
+        if not user:
+            # Try to authenticate with email
+            from users.models import User
+            try:
+                user_obj = User.objects.get(email=username)
+                user = authenticate(username=user_obj.username, password=password)
+            except User.DoesNotExist:
+                pass
+
+        if not user:
+            raise serializers.ValidationError('No active account found with the given credentials')
+
+        data = super().validate({'username': user.username, 'password': password})
+        return data 

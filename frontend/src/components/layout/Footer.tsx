@@ -64,13 +64,13 @@ const Footer = () => {
               </li>
               {/* Remove Find Medicine and Upload Prescription links. If you ever want to show Find Medicine only for patients, use:
               {user?.user_type !== 'pharmacy' && (
-                <li>
-                  <Link to="/search" className="text-gray-400 hover:text-white transition-colors flex items-center group">
-                    <ArrowRight className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" />
-                    <span>Find Medicine</span>
-                  </Link>
-                </li>
-              )}
+              <li>
+                <Link to="/search" className="text-gray-400 hover:text-white transition-colors flex items-center group">
+                  <ArrowRight className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" />
+                  <span>Find Medicine</span>
+                </Link>
+              </li>
+                  )}
               */}
               <li>
                 <Link to="/pharmacy/login" className="text-gray-400 hover:text-white transition-colors flex items-center group">

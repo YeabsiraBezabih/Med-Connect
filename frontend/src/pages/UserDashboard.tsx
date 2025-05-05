@@ -4,19 +4,24 @@ import { Search, FileText, MessageSquare, Clock, AlertCircle, X } from 'lucide-r
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import userService, { Prescription, SearchHistory, Order } from '../services/user.service';
+import MapView from '../components/MapView';
+import chatService, { ChatRoom } from '../services/chat.service';
 
 const REFRESH_INTERVAL = 60000; // Refresh every 60 seconds instead of 30
 
 const UserDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'searches' | 'prescriptions' | 'orders'>('searches');
+  const [activeTab, setActiveTab] = useState<'searches' | 'prescriptions' | 'chats'>('searches');
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [mapPharmacy, setMapPharmacy] = useState<any>(null);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [chats, setChats] = useState<ChatRoom[]>([]);
   
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -29,14 +34,12 @@ const UserDashboard = () => {
       const now = Date.now();
       if (now - lastFetchTime < 5000) return;
       setLastFetchTime(now);
-      const [searches, prescs, ords] = await Promise.all([
+      const [searches, prescs] = await Promise.all([
         userService.getSearchHistory(),
         userService.getPrescriptions(),
-        userService.getOrders(),
       ]);
       setSearchHistory(searches || []);
       setPrescriptions(prescs || []);
-      setOrders(ords || []);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to fetch data';
       setError(errorMessage);
@@ -58,8 +61,6 @@ const UserDashboard = () => {
         setSearchHistory(await userService.getSearchHistory() || []);
       } else if (activeTab === 'prescriptions') {
         setPrescriptions(await userService.getPrescriptions() || []);
-      } else if (activeTab === 'orders') {
-        setOrders(await userService.getOrders() || []);
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to fetch data';
@@ -81,7 +82,7 @@ const UserDashboard = () => {
     if (!user) return;
     fetchTabData(true);
   }, [activeTab, user, fetchTabData]);
-
+    
   // Auto-refresh all data
   useEffect(() => {
     if (!user) return;
@@ -90,6 +91,23 @@ const UserDashboard = () => {
     }, REFRESH_INTERVAL);
     return () => clearInterval(intervalId);
   }, [user, fetchAllData]);
+
+  // Add effect to get user location
+  useEffect(() => {
+    if (!userLocation && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => setUserLocation(null)
+      );
+    }
+  }, [userLocation]);
+
+  // Fetch chats when Chats tab is active
+  useEffect(() => {
+    if (activeTab === 'chats') {
+      chatService.getChatRooms().then(setChats).catch(() => setChats([]));
+    }
+  }, [activeTab]);
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -132,15 +150,15 @@ const UserDashboard = () => {
               <span>Prescriptions</span>
             </button>
             <button
-              onClick={() => setActiveTab('orders')}
+              onClick={() => setActiveTab('chats')}
               className={`flex items-center gap-2 px-6 py-4 text-sm font-medium ${
-                activeTab === 'orders'
+                activeTab === 'chats'
                   ? 'text-blue-600 border-b-2 border-blue-500'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               <MessageSquare className="h-5 w-5" />
-              <span>Orders</span>
+              <span>Chats</span>
             </button>
           </div>
           
@@ -255,19 +273,26 @@ const UserDashboard = () => {
                               {prescription.notes && (
                                 <p className="text-sm text-gray-600 mt-2">{prescription.notes}</p>
                               )}
-                              <span className="text-blue-600 hover:text-blue-800 text-sm block mt-2">View Details</span>
-                              {prescription.status === 'approved' && prescription.chat_room_id && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.location.href = `/chat/room/${prescription.chat_room_id}`;
-                                  }}
-                                  className="btn-primary mt-2 flex items-center gap-1"
+                              <div className="flex items-center gap-2 mt-2">
+                                <span
+                                  className="text-blue-600 hover:text-blue-800 text-sm cursor-pointer"
+                                  onClick={() => setSelectedPrescription(prescription)}
                                 >
-                                  <MessageSquare className="h-4 w-4" />
-                                  <span>Chat</span>
-                                </button>
-                              )}
+                                  View Details
+                                </span>
+                                {prescription.status === 'accepted' && prescription.chat_room_id && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.location.href = `/chat/${prescription.chat_room_id}`;
+                                    }}
+                                    className="btn-primary flex items-center gap-1"
+                                  >
+                                    <MessageSquare className="h-4 w-4" />
+                                    <span>Chat</span>
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -287,36 +312,28 @@ const UserDashboard = () => {
                   </div>
                 )}
                 
-                {/* Orders Tab */}
-                {activeTab === 'orders' && (
+                {/* Chats Tab */}
+                {activeTab === 'chats' && (
                   <div>
-                    {orders.length > 0 ? (
+                    {chats.length > 0 ? (
                       <div className="space-y-4">
-                        {orders.map((order) => (
+                        {chats.map((chat) => (
                           <div
-                            key={order.id}
-                            className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                            onClick={() => setSelectedOrder(order)}
+                            key={chat.id}
+                            className="border rounded-lg p-4 hover:bg-gray-50 transition-colors flex items-center gap-4"
                           >
-                            <div className="flex justify-between items-center mb-2">
-                              <h3 className="font-medium">Order #{order.id}</h3>
-                              <span className={`badge ${
-                                order.status === 'delivered' ? 'badge-success' :
-                                order.status === 'cancelled' ? 'badge-error' :
-                                'badge-warning'
-                              }`}>
-                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm text-gray-500">
-                              <span>
-                                <Clock className="h-4 w-4 inline mr-1" />
-                                {formatDate(order.created_at)}
-                              </span>
-                              <span>Total: ${order.total_amount}</span>
-                            </div>
-                            <div className="mt-2">
-                              <span className="text-blue-600 hover:text-blue-800 text-sm">View Details</span>
+                            <div className="flex-1">
+                              <div className="font-medium text-lg">
+                                {chat.pharmacy?.first_name || chat.pharmacy?.username || 'Pharmacy'}
+                              </div>
+                              <div className="text-gray-500 text-sm mb-2">Chat Room #{chat.id}</div>
+                              <button
+                                onClick={() => window.location.href = `/chat/${chat.id}`}
+                                className="btn-primary flex items-center gap-1"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                                <span>Chat</span>
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -324,9 +341,9 @@ const UserDashboard = () => {
                     ) : (
                       <div className="text-center py-10">
                         <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-1">No orders yet</h3>
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">No chats yet</h3>
                         <p className="text-gray-500">
-                          Your order history will appear here once you make a purchase
+                          You will see your chats with accepted pharmacies here.
                         </p>
                       </div>
                     )}
@@ -340,7 +357,7 @@ const UserDashboard = () => {
         {/* Prescription Detail Modal */}
         {selectedPrescription && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-lg w-full">
+            <div className="bg-white rounded-lg max-w-lg w-full" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
               <div className="flex justify-between items-center border-b p-4">
                 <h3 className="text-lg font-medium">Prescription Details</h3>
                 <button onClick={() => setSelectedPrescription(null)} className="text-gray-400 hover:text-gray-500"><X className="h-6 w-6" /></button>
@@ -352,35 +369,73 @@ const UserDashboard = () => {
                 <div className="mb-2"><strong>Created At:</strong> {formatDate(selectedPrescription.created_at)}</div>
                 <div className="mb-2"><strong>Updated At:</strong> {formatDate(selectedPrescription.updated_at)}</div>
                 <div className="mb-2"><strong>Patient ID:</strong> {selectedPrescription.patient}</div>
-                <div className="mb-2"><strong>Pharmacy:</strong> {selectedPrescription.pharmacy || 'N/A'}</div>
-                <div className="mb-2"><strong>Medicine:</strong> {selectedPrescription.medicine || 'N/A'}</div>
+                <div className="mb-2">
+                  {selectedPrescription.pharmacy && (
+                    <div className="mb-2 text-green-700 font-semibold">
+                      {selectedPrescription.pharmacy.business_name} has the prescribed medicine.
+                    </div>
+                  )}
+                  <strong>Pharmacy:</strong> {selectedPrescription.pharmacy ? (
+                    <div className="border rounded p-2 bg-gray-50 mt-1">
+                      <div><strong>Name:</strong> {selectedPrescription.pharmacy.business_name}</div>
+                      <div><strong>Address:</strong> {selectedPrescription.pharmacy.user.address}</div>
+                      <div><strong>Phone:</strong> {selectedPrescription.pharmacy.user.phone_number}</div>
+                      <div><strong>Email:</strong> {selectedPrescription.pharmacy.user.email}</div>
+                      <div><strong>Operating Hours:</strong> {selectedPrescription.pharmacy.operating_hours}</div>
+                      {(selectedPrescription.pharmacy.latitude && selectedPrescription.pharmacy.longitude) && (
+                        <button
+                          className="btn-outline mt-2"
+                          onClick={() => {
+                            setMapPharmacy(selectedPrescription.pharmacy);
+                            setShowMapModal(true);
+                          }}
+                        >
+                          View on Map
+                        </button>
+                      )}
+                    </div>
+                  ) : 'N/A'}
+                </div>
               </div>
               <div className="flex justify-end p-4 border-t">
+                {selectedPrescription.chat_room_id && (
+                  <button
+                    onClick={() => {
+                      window.location.href = `/chat/${selectedPrescription.chat_room_id}`;
+                    }}
+                    className="btn-primary mr-2 flex items-center gap-1"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Chat with Pharmacy</span>
+                  </button>
+                )}
                 <button onClick={() => setSelectedPrescription(null)} className="btn-outline">Close</button>
               </div>
             </div>
           </div>
         )}
-        {/* Order Detail Modal */}
-        {selectedOrder && (
+        
+        {/* Map Modal */}
+        {showMapModal && mapPharmacy && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-lg w-full">
-              <div className="flex justify-between items-center border-b p-4">
-                <h3 className="text-lg font-medium">Order Details</h3>
-                <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-500"><X className="h-6 w-6" /></button>
-              </div>
+            <div className="bg-white rounded-lg max-w-2xl w-full relative">
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                onClick={() => setShowMapModal(false)}
+              >
+                <X className="h-6 w-6" />
+              </button>
               <div className="p-4">
-                <div className="mb-2"><strong>Status:</strong> {selectedOrder.status}</div>
-                <div className="mb-2"><strong>Total Amount:</strong> ${selectedOrder.total_amount}</div>
-                <div className="mb-2"><strong>Shipping Address:</strong> {selectedOrder.shipping_address}</div>
-                <div className="mb-2"><strong>Created At:</strong> {formatDate(selectedOrder.created_at)}</div>
-                <div className="mb-2"><strong>Updated At:</strong> {formatDate(selectedOrder.updated_at)}</div>
-                <div className="mb-2"><strong>Patient ID:</strong> {selectedOrder.patient}</div>
-                <div className="mb-2"><strong>Pharmacy ID:</strong> {selectedOrder.pharmacy}</div>
-                <div className="mb-2"><strong>Prescription ID:</strong> {selectedOrder.prescription || 'N/A'}</div>
-              </div>
-              <div className="flex justify-end p-4 border-t">
-                <button onClick={() => setSelectedOrder(null)} className="btn-outline">Close</button>
+                <h3 className="text-lg font-medium mb-2">Pharmacy Location</h3>
+                <MapView
+                  pharmacy={{
+                    lat: Number(mapPharmacy.latitude),
+                    lng: Number(mapPharmacy.longitude),
+                    name: mapPharmacy.business_name,
+                    address: mapPharmacy.user.address,
+                  }}
+                  userLocation={userLocation}
+                />
               </div>
             </div>
           </div>

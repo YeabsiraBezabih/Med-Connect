@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Search, Send, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageSquare, Search, Send } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import chatService, { ChatRoom, ChatMessage } from '../../services/chat.service';
 
@@ -14,7 +14,8 @@ const ChatsTab = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   
   const { showToast } = useToast();
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Load chats
   useEffect(() => {
@@ -29,8 +30,12 @@ const ChatsTab = () => {
         if (data.length > 0 && !selectedChat) {
           handleSelectChat(data[0]);
         }
-      } catch (error: any) {
-        showToast(error.message || 'Failed to load chats', 'error');
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          showToast(error.message || 'Failed to load chats', 'error');
+        } else {
+          showToast('Failed to load chats', 'error');
+        }
       } finally {
         setLoading(false);
       }
@@ -57,6 +62,16 @@ const ChatsTab = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Clean up WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, []);
+
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -82,13 +97,38 @@ const ChatsTab = () => {
   // Select a chat
   const handleSelectChat = async (chat: ChatRoom) => {
     setSelectedChat(chat);
-    
+
+    // Close previous WebSocket if any
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
     try {
       // Load messages
       const chatMessages = await chatService.getChatMessages(chat.id);
-      setMessages(chatMessages);
-    } catch (error: any) {
-      showToast(error.message || 'Failed to load messages', 'error');
+      setMessages(chatMessages.reverse());
+
+      // Open WebSocket connection
+      const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const wsUrl = `${wsProto}://${window.location.host}/ws/chat/rooms/${chat.id}/`;
+      const ws = new window.WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.error) return;
+        setMessages(prev => [...prev, data]);
+      };
+      ws.onclose = () => {
+        wsRef.current = null;
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        showToast(error.message || 'Failed to load messages', 'error');
+      } else {
+        showToast('Failed to load messages', 'error');
+      }
     }
   };
 
@@ -101,28 +141,22 @@ const ChatsTab = () => {
     setSendingMessage(true);
     
     try {
-      // Send message
-      const message = await chatService.sendMessage(selectedChat.id, newMessage.trim());
-      
-      // Add to UI immediately
-      setMessages(prev => [...prev, message]);
-      setNewMessage('');
-      
-      // Update chat in list with last message
-      const updatedChat = {
-        ...selectedChat,
-        last_message: message
-      };
-      
-      setChats(prevChats => 
-        prevChats.map(c => c.id === selectedChat.id ? updatedChat : c)
-      );
-      setFilteredChats(prevChats => 
-        prevChats.map(c => c.id === selectedChat.id ? updatedChat : c)
-      );
-      setSelectedChat(updatedChat);
-    } catch (error: any) {
-      showToast(error.message || 'Failed to send message', 'error');
+      if (wsRef.current && wsRef.current.readyState === 1) {
+        wsRef.current.send(JSON.stringify({ content: newMessage.trim() }));
+        setNewMessage('');
+      } else {
+        // fallback to REST if websocket not connected
+        const message = await chatService.sendMessage(selectedChat.id, newMessage.trim());
+        setMessages(prev => [...prev, message]);
+        setNewMessage('');
+      }
+      // Optionally update chat in list with last message
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        showToast(error.message || 'Failed to send message', 'error');
+      } else {
+        showToast('Failed to send message', 'error');
+      }
     } finally {
       setSendingMessage(false);
     }

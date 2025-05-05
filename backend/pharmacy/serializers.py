@@ -32,12 +32,26 @@ class MedicineSerializer(serializers.ModelSerializer):
             
         return data
 
+class PharmacyProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PharmacyProfile
+        fields = ['id', 'business_name', 'license_number', 'operating_hours', 'latitude', 'longitude', 'is_verified', 'user']
+
+    user = serializers.SerializerMethodField()
+    def get_user(self, obj):
+        return {
+            'id': obj.user.id,
+            'email': obj.user.email,
+            'phone_number': obj.user.phone_number,
+            'address': obj.user.address,
+        }
+
 class PrescriptionSerializer(serializers.ModelSerializer):
     prescription_image = serializers.URLField()
     latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False)
     longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False)
     medicine = serializers.PrimaryKeyRelatedField(queryset=Medicine.objects.all(), required=False, allow_null=True)
-    pharmacy = serializers.PrimaryKeyRelatedField(queryset=PharmacyProfile.objects.all(), required=False, allow_null=True)
+    pharmacy = PharmacyProfileSerializer(read_only=True)
     patient = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
         model = Prescription

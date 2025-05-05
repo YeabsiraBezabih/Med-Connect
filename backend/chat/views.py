@@ -19,24 +19,19 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             return ChatRoom.objects.none()
         return ChatRoom.objects.filter(participants=self.request.user)
 
-    @action(detail=True, methods=['post'])
-    def send_message(self, request, pk=None):
-        """
-        Send a message in the chat room
-        """
-        chat_room = self.get_object()
-        serializer = MessageSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(sender=request.user, chat_room=chat_room)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get', 'post'])
     def messages(self, request, pk=None):
         """
-        Get all messages in the chat room
+        Get all messages in the chat room (GET) or send a message (POST)
         """
         chat_room = self.get_object()
-        messages = chat_room.messages.all().order_by('-created_at')
-        serializer = MessageSerializer(messages, many=True)
-        return Response(serializer.data)
+        if request.method == 'GET':
+            messages = chat_room.messages.all().order_by('-created_at')
+            serializer = MessageSerializer(messages, many=True)
+            return Response(serializer.data)
+        elif request.method == 'POST':
+            serializer = MessageSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(sender=request.user, chat_room=chat_room)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

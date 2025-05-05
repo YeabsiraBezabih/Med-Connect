@@ -45,6 +45,7 @@ class MedicineViewSet(viewsets.ModelViewSet):
         lat = request.query_params.get('lat')
         lng = request.query_params.get('lng')
         radius = float(request.query_params.get('radius', 10.0))  # Default 10km radius
+        sort = request.query_params.get('sort', 'distance')  # New: sort param
         
         if not all([name, lat, lng]):
             return Response(
@@ -77,7 +78,13 @@ class MedicineViewSet(viewsets.ModelViewSet):
         ).filter(
             name__icontains=name,
             distance__lte=radius
-        ).select_related('pharmacy').order_by('distance')
+        ).select_related('pharmacy')
+
+        # Sort by distance or price
+        if sort == 'price':
+            queryset = queryset.order_by('price')
+        else:
+            queryset = queryset.order_by('distance')
 
         # Include pharmacy information in the response
         results = []
@@ -91,8 +98,8 @@ class MedicineViewSet(viewsets.ModelViewSet):
                 'pharmacy': {
                     'id': medicine.pharmacy.id,
                     'name': medicine.pharmacy.business_name,
-                    'address': medicine.pharmacy.address,
-                    'phone': medicine.pharmacy.phone_number,
+                    'address': medicine.pharmacy.user.address,
+                    'phone': medicine.pharmacy.user.phone_number,
                     'latitude': medicine.pharmacy.latitude,
                     'longitude': medicine.pharmacy.longitude,
                 },
@@ -170,7 +177,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
         """
         Pharmacy accepts a prescription: assign it to this pharmacy and update status to 'accepted'.
         Also, create a chat room between the pharmacy and the patient if it doesn't exist.
-        Returns the chat room ID in the response.
+        Returns the chat room ID and URL in the response.
         """
         if request.user.user_type != 'pharmacy':
             return Response({'detail': 'Only pharmacies can accept prescriptions.'}, status=status.HTTP_403_FORBIDDEN)
@@ -190,6 +197,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
             chat_room.participants.add(patient, pharmacy_user)
         data = self.get_serializer(prescription).data
         data['chat_room_id'] = chat_room.id
+        data['chat_room_url'] = f"/api/chat/rooms/{chat_room.id}/"  # Add chat room API URL
         return Response(data)
 
 class OrderViewSet(viewsets.ModelViewSet):
