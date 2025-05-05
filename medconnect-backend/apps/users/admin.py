@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, PharmacyProfile, PatientProfile
+from .models import User, PharmacyProfile, PatientProfile, MedicineInventory
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
@@ -35,4 +35,12 @@ class PharmacyProfileAdmin(admin.ModelAdmin):
 class PatientProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'date_of_birth', 'emergency_contact')
     search_fields = ('user__email', 'user__first_name', 'user__last_name')
-    list_filter = ('date_of_birth',) 
+    list_filter = ('date_of_birth',)
+
+@admin.register(MedicineInventory)
+class MedicineInventoryAdmin(admin.ModelAdmin):
+    list_display = ('medicine_name', 'pharmacy', 'quantity', 'expiry_date', 'unit_price')
+    list_filter = ('pharmacy', 'expiry_date')
+    search_fields = ('medicine_name', 'manufacturer', 'batch_number', 'pharmacy__email')
+    readonly_fields = ('created_at', 'updated_at')
+    date_hierarchy = 'expiry_date' 

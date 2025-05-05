@@ -3,12 +3,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
-from .models import PharmacyProfile, PatientProfile
+from .models import PharmacyProfile, PatientProfile, MedicineInventory
 from .serializers import (
     UserSerializer, PharmacyProfileSerializer, PatientProfileSerializer,
-    UserRegistrationSerializer
+    UserRegistrationSerializer, MedicineInventorySerializer
 )
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -80,4 +81,33 @@ class PatientProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if self.request.user.user_type == 'patient':
             return PatientProfile.objects.filter(user=self.request.user)
-        return PatientProfile.objects.none() 
+        return PatientProfile.objects.none()
+
+class MedicineInventoryViewSet(viewsets.ModelViewSet):
+    serializer_class = MedicineInventorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        if self.request.user.user_type == 'pharmacy':
+            return MedicineInventory.objects.filter(pharmacy=self.request.user)
+        return MedicineInventory.objects.none()
+    
+    def perform_create(self, serializer):
+        serializer.save(pharmacy=self.request.user)
+    
+    @action(detail=False, methods=['get'])
+    def expired(self, request):
+        queryset = self.get_queryset().filter(expiry_date__lt=timezone.now().date())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def expiring_soon(self, request):
+        # Get medicines expiring in the next 30 days
+        thirty_days_from_now = timezone.now().date() + timezone.timedelta(days=30)
+        queryset = self.get_queryset().filter(
+            expiry_date__gt=timezone.now().date(),
+            expiry_date__lte=thirty_days_from_now
+        )
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data) 

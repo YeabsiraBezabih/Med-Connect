@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import PharmacyProfile, PatientProfile
+from .models import PharmacyProfile, PatientProfile, MedicineInventory
 
 User = get_user_model()
 
@@ -26,6 +26,14 @@ class PatientProfileSerializer(serializers.ModelSerializer):
         model = PatientProfile
         fields = '__all__'
         read_only_fields = ('user',)
+
+class MedicineInventorySerializer(serializers.ModelSerializer):
+    pharmacy = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = MedicineInventory
+        fields = '__all__'
+        read_only_fields = ('pharmacy', 'created_at', 'updated_at')
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)

@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from django.utils import timezone
+from .swagger_settings import SWAGGER_SETTINGS
 
 
 # Load environment variables from .env file
@@ -107,8 +109,12 @@ ASGI_APPLICATION = 'medconnect_project.asgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'medconnect'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'admin'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -171,7 +177,8 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
-
+# Swagger settings
+SWAGGER_SETTINGS = SWAGGER_SETTINGS
 
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

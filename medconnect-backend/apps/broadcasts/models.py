@@ -38,6 +38,7 @@ class PharmacyResponse(models.Model):
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    expiry_date = models.DateTimeField()
     
     class Meta:
         unique_together = ('broadcast', 'pharmacy')
