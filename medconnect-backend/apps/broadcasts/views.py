@@ -29,6 +29,28 @@ class PrescriptionBroadcastViewSet(viewsets.ModelViewSet):
             return BroadcastCreateSerializer
         return PrescriptionBroadcastSerializer
     
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        search_query = request.query_params.get('q', '')
+        if not search_query:
+            return Response(
+                {'error': 'Search query parameter "q" is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        queryset = self.get_queryset()
+        if not queryset:
+            return Response([])
+            
+        # Search in medication_name and notes
+        results = queryset.filter(
+            Q(medication_name__icontains=search_query) |
+            Q(notes__icontains=search_query)
+        )
+        
+        serializer = self.get_serializer(results, many=True)
+        return Response(serializer.data)
+    
     @action(detail=True, methods=['post'])
     def respond(self, request, pk=None):
         broadcast = self.get_object()

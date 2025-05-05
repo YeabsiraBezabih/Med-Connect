@@ -1,10 +1,12 @@
 import { create } from 'zustand';
+import { searchBroadcasts } from '../services/broadcasts';
 
 const useBroadcastStore = create((set) => ({
   broadcasts: [],
   currentBroadcast: null,
   loading: false,
   error: null,
+  searchResults: [],
   setBroadcasts: (broadcasts) => set({ broadcasts }),
   setCurrentBroadcast: (broadcast) => set({ currentBroadcast: broadcast }),
   setLoading: (loading) => set({ loading }),
@@ -21,6 +23,16 @@ const useBroadcastStore = create((set) => ({
     set((state) => ({
       broadcasts: state.broadcasts.filter((broadcast) => broadcast.id !== id),
     })),
+  searchBroadcasts: async (query) => {
+    set({ loading: true, error: null });
+    try {
+      const results = await searchBroadcasts(query);
+      set({ searchResults: results, loading: false });
+    } catch (error) {
+      set({ error: error.message, loading: false });
+    }
+  },
+  clearSearchResults: () => set({ searchResults: [] }),
 }));
 
 export default useBroadcastStore; 

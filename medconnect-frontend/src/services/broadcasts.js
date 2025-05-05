@@ -9,6 +9,15 @@ export const getBroadcasts = async () => {
   }
 };
 
+export const searchBroadcasts = async (query) => {
+  try {
+    const response = await api.get(`/broadcasts/search?q=${encodeURIComponent(query)}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to search broadcasts' };
+  }
+};
+
 export const getBroadcastById = async (id) => {
   try {
     const response = await api.get(`/broadcasts/${id}`);
