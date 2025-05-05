@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import CountUp from 'react-countup';
 import { Search, Upload, MessageSquare, PlusCircle, MapPin, ShieldCheck } from 'lucide-react';
 
 const LandingPage = () => {
@@ -52,20 +53,28 @@ const LandingPage = () => {
               </div>
               
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-6 pt-8 border-t border-white/10 mt-8">
-                <div>
-                  <div className="text-3xl font-bold">500+</div>
-                  <div className="text-blue-200 text-sm">Pharmacies</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold">10K+</div>
-                  <div className="text-blue-200 text-sm">Medicines</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold">50K+</div>
-                  <div className="text-blue-200 text-sm">Users</div>
-                </div>
-              </div>
+              {/* Stats */}
+<div className="grid grid-cols-3 gap-6 pt-8 border-t border-white/10 mt-8">
+  <div>
+    <div className="text-3xl font-bold text-white">
+      <CountUp end={500} duration={2} separator="," />+
+    </div>
+    <div className="text-blue-200 text-sm">Pharmacies</div>
+  </div>
+  <div>
+    <div className="text-3xl font-bold text-white">
+      <CountUp end={10000} duration={2} separator="," />+
+    </div>
+    <div className="text-blue-200 text-sm">Medicines</div>
+  </div>
+  <div>
+    <div className="text-3xl font-bold text-white">
+      <CountUp end={50000} duration={2} separator="," />+
+    </div>
+    <div className="text-blue-200 text-sm">Users</div>
+  </div>
+</div>
+
             </div>
             
             <div className="md:w-1/2 relative">
@@ -234,8 +243,36 @@ const LandingPage = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+
+          {/* Feature 5 
+          <Filter className="h-6 w-6 text-white" />
+          */}
+<div className="group p-8 rounded-2xl hover:bg-gray-50 transition-all duration-300">
+  <div className="flex items-start space-x-6">
+    <div className="bg-blue-600 p-4 rounded-xl group-hover:scale-110 transition-transform duration-300">
+      
+    </div>
+    <div>
+      <h3 className="text-2xl font-semibold mb-3 text-gray-900">Advanced Filtered Search</h3>
+      <p className="text-gray-600 leading-relaxed">
+        Search smarter by applying filters like distance, available discounts, or night-time pharmacy availability to find exactly what you need, faster.
+      </p>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+
+    
+
+
+
+
+
+
+
+
       </section>
 
       {/* CTA */}

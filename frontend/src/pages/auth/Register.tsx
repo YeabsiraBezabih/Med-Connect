@@ -100,6 +100,8 @@ const Register = () => {
             <p className="text-gray-600 mt-2">Join MedConnect to find medicines near you</p>
           </div>
           
+
+          
           <div className="bg-white rounded-xl shadow-md p-6 md:p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* First Name */}
