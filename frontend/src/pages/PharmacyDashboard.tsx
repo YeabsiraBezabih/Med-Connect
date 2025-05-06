@@ -1,16 +1,14 @@
-import React from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Package, FileText, MessageSquare, Users, Settings } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { Package, FileText, MessageSquare, Settings, Pill } from 'lucide-react';
 
 // Dashboard tabs
 import InventoryTab from '../components/pharmacy/InventoryTab';
 import PrescriptionsTab from '../components/pharmacy/PrescriptionsTab';
 import ChatsTab from '../components/pharmacy/ChatsTab';
+import ExpiryTap from '../components/pharmacy/ExpiryTap';
 
 const PharmacyDashboard = () => {
   const location = useLocation();
-  const { user } = useAuth();
   
   // Extract current path for active tab
   const currentPath = location.pathname.split('/').pop() || 'inventory';
@@ -68,6 +66,17 @@ const PharmacyDashboard = () => {
               <MessageSquare className="h-5 w-5" />
               <span>Chats</span>
             </Link>
+            <Link
+              to="/pharmacy/dashboard/expiry"
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-medium min-w-max ${
+                currentPath === 'expiry'
+                  ? 'text-blue-600 border-b-2 border-blue-500'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Pill className="h-5 w-5" />
+              <span>Expiry Alerts</span>
+            </Link>
           </div>
           
           {/* Tab Content */}
@@ -76,6 +85,7 @@ const PharmacyDashboard = () => {
             <Route path="/inventory" element={<InventoryTab />} />
             <Route path="/prescriptions" element={<PrescriptionsTab />} />
             <Route path="/chats" element={<ChatsTab />} />
+            <Route path="/expiry" element={<ExpiryTap />} />
             <Route path="/settings" element={
               <div className="p-8 text-center">
                 <h3 className="text-lg font-medium mb-2">Pharmacy Settings</h3>
