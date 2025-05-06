@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-// @ts-expect-error: If you see a type error for leaflet, run: npm i --save-dev @types/leaflet
+
 import L from 'leaflet';
 
 interface MapViewProps {

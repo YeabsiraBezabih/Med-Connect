@@ -329,10 +329,12 @@ const SearchPage = () => {
                 <h3 className="text-lg font-semibold mb-2 text-center">Map View</h3>
                 <MapView
                   userLocation={{ lat: position.latitude, lng: position.longitude }}
-                  pharmacies={mapPharmacies}
-                  selectedPharmacyId={selectedPharmacyId}
-                  onSelectPharmacy={setSelectedPharmacyId}
-                  apiKey={OPENROUTESERVICE_API_KEY}
+                  pharmacy={{
+                    lat: mapPharmacies.find(p => p.id === selectedPharmacyId)?.latitude ?? 0,
+                    lng: mapPharmacies.find(p => p.id === selectedPharmacyId)?.longitude ?? 0,
+                    name: mapPharmacies.find(p => p.id === selectedPharmacyId)?.name ?? '',
+                    address: mapPharmacies.find(p => p.id === selectedPharmacyId)?.address ?? '',
+                  }}
                 />
               </div>
             )}
@@ -344,14 +346,17 @@ const SearchPage = () => {
                   <button onClick={() => setShowMapModal(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
                   <h2 className="text-xl font-bold mb-2 text-center">Pharmacy Location</h2>
                   <div className="flex-1 overflow-y-auto mb-2 px-1" style={{ minHeight: 300 }}>
-                    <MapView
-                      userLocation={{ lat: position.latitude, lng: position.longitude }}
-                      pharmacies={mapPharmacies}
-                      selectedPharmacyId={selectedPharmacyId}
-                      onSelectPharmacy={() => {}}
-                      apiKey={OPENROUTESERVICE_API_KEY}
-                      singlePharmacyMode={true}
-                    />
+                    {position && (
+                      <MapView
+                        userLocation={{ lat: position.latitude, lng: position.longitude }}
+                        pharmacy={{
+                          lat: mapPharmacies.find(p => p.id === selectedPharmacyId)?.latitude ?? 0,
+                          lng: mapPharmacies.find(p => p.id === selectedPharmacyId)?.longitude ?? 0,
+                          name: mapPharmacies.find(p => p.id === selectedPharmacyId)?.name ?? '',
+                          address: mapPharmacies.find(p => p.id === selectedPharmacyId)?.address ?? '',
+                        }}
+                      />
+                    )}
                   </div>
                   <a
                     href={`https://maps.google.com/?q=${mapPharmacies.find(p => p.id === selectedPharmacyId)?.latitude},${mapPharmacies.find(p => p.id === selectedPharmacyId)?.longitude}`}

@@ -23,6 +23,8 @@ MedConnect aims to:
 - **UI**: User Interface
 - **ETB**: Ethiopian Birr (currency)
 - **JWT**: JSON Web Token
+- **Expiry Date**: The date after which a medicine is considered expired and should not be dispensed.
+- **Discount**: A percentage or fixed amount reduction in the price of a medicine, set by the pharmacy.
 
 ### 1.4 References
 - IEEE SRS Standard 830-1998
@@ -39,13 +41,15 @@ MedConnect is a standalone web application with a React frontend and Django back
 
 ### 2.2 Product Functions
 - User registration and authentication (patients, pharmacies)
-- Medicine search (by name, location, stock, price)
-- Pharmacy inventory management
+- Medicine search (by name, location, stock, price, expiry, discount)
+- Pharmacy inventory management (including expiry date and discount)
 - Prescription upload and response
 - Order management
-- Real-time chat between users and pharmacies
+- Real-time chat between users and pharmacies (WebSocket-based)
 - Legal and info pages (Privacy Policy, Terms of Service, FAQ)
-- Location-based features (pharmacy geolocation)
+- Location-based features (pharmacy geolocation, search radius)
+- Map view of pharmacies and routes
+- Chatbot for user support
 
 ### 2.3 User Classes and Characteristics
 - **Patient**: Can search for medicines, view pharmacies, upload prescriptions, place orders, and chat with pharmacies.
@@ -88,13 +92,16 @@ MedConnect is a standalone web application with a React frontend and Django back
 
 #### 3.1.2 Medicine Search
 - FR5: The system shall allow patients to search for medicines by name.
-- FR6: The system shall allow filtering by distance, price, and stock status.
-- FR7: The system shall display pharmacy details, distance, and contact options.
+- FR6: The system shall allow filtering by distance, price, stock status, expiry date, and discount.
+- FR7: The system shall display pharmacy details, distance, contact options, expiry date, and discount information.
 
 #### 3.1.3 Pharmacy Inventory Management
 - FR8: The system shall allow pharmacies to add, edit, and delete medicines.
 - FR9: The system shall require location to be set for each pharmacy.
-- FR10: The system shall display inventory in a dashboard.
+- FR10: The system shall display inventory in a dashboard, including expiry date and discount for each medicine.
+- FR10a: The system shall allow pharmacies to set an expiry date for each medicine.
+- FR10b: The system shall allow pharmacies to set a discount (percentage or fixed) for each medicine.
+- FR10c: The system shall prevent dispensing or ordering expired medicines.
 
 #### 3.1.4 Prescription and Order Management
 - FR11: The system shall allow patients to upload prescriptions.
@@ -142,11 +149,13 @@ MedConnect is a standalone web application with a React frontend and Django back
 
 ### 4.1 User Interfaces
 - Responsive web UI for patients and pharmacies
-- Dashboard for pharmacy management
-- Search and results pages for patients
+- Dashboard for pharmacy management (with expiry and discount management)
+- Search and results pages for patients (showing expiry date and discount)
 - Registration and login forms
-- Chat interface
+- Chat interface (real-time, WebSocket-based)
 - Info/legal pages
+- Map view for pharmacies and routes
+- Chatbot modal for user support
 
 ### 4.2 Hardware Interfaces
 - None (web-based)
