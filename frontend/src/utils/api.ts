@@ -38,7 +38,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const response = await axios.post('http://localhost:8000/api/users/token/refresh/', {
+        const response = await axios.post('https://med-connect-oafn.onrender.com/api/users/token/refresh/', {
           refresh: refreshToken
         });
 
